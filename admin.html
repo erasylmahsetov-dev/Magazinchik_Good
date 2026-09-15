@@ -1,40 +1,5 @@
-<!doctype html><html lang="ru"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Служебная часть</title>
-<style>
-*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:linear-gradient(135deg,#fff7eb,#f4f6fb);color:#171717}
-.app{max-width:760px;margin:auto;padding:18px 14px 100px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
-.logo{font-size:21px;font-weight:800}.badge{background:#fff0dc;color:#d66c00;padding:7px 10px;border-radius:12px;font-size:12px;font-weight:700}
-.card{background:#fff;border-radius:20px;padding:17px;margin:12px 0;box-shadow:0 7px 25px #0000000d}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.tile{border:0;background:#fff;border-radius:18px;padding:18px;text-align:left;box-shadow:0 5px 20px #0000000d;cursor:pointer}.tile span{font-size:27px}.tile b{display:block;margin-top:8px}
-.primary{border:0;background:#ff8a00;color:#fff;border-radius:13px;padding:12px 15px;font-weight:700}.secondary{border:1px solid #ddd;background:#fff;border-radius:13px;padding:10px 12px}
-.danger{border:0;background:#ffe8e8;color:#c62828;border-radius:12px;padding:9px 12px}.actions{display:flex;gap:8px;flex-wrap:wrap}
-.product{display:flex;gap:12px;align-items:center}.product .pic{width:70px;height:70px;border-radius:14px;background:#eee}.muted{color:#777}.status{display:inline-block;padding:5px 8px;border-radius:10px;background:#f1f1f1;font-size:12px}
-.nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #eee;padding:10px;display:flex;justify-content:center;gap:8px;z-index:20}
-.nav button{border:0;background:transparent;padding:9px 13px;border-radius:12px}.nav button.active{background:#fff0dc;color:#d66c00;font-weight:800}
-@media(max-width:500px){.grid{grid-template-columns:1fr 1fr}}
-</style></head><body><div class="app"><div class="card"><b>🔐 Служебный доступ</b><p class="muted">Ключ администратора хранится только в этой сессии.</p><button class="primary" onclick="ADMIN_KEY=prompt('Ключ администратора')||ADMIN_KEY;sessionStorage.setItem('admin_key',ADMIN_KEY);refresh().then(()=>show('home'))">Ввести ключ</button></div>
-<div class="top"><div><div class="muted">Служебная часть</div><div class="logo">🛠️ Управление магазином</div></div><div class="badge">ADMIN</div></div>
-<div id="content"></div></div>
-<div class="nav"><button id="h" onclick="refresh().then(()=>show('home')).catch(()=>show('home'))">🏠 Главная</button><button id="p" onclick="show('products')">📦 Товары</button><button id="o" onclick="show('orders')">🧾 Заказы</button><button id="u" onclick="show('users')">👥 Пользователи</button></div>
-<script>
-const API_BASE='';
-let ADMIN_KEY=sessionStorage.getItem('admin_key')||'';
-const S={products:[],orders:[],users:[]};
-async function api(url,opts={}){opts.headers={...(opts.headers||{}),'Content-Type':'application/json'}; if(ADMIN_KEY) opts.headers['X-Admin-Key']=ADMIN_KEY; const r=await fetch(API_BASE+url,opts); if(r.status===401){ADMIN_KEY=prompt('Введите ключ администратора'); if(ADMIN_KEY){sessionStorage.setItem('admin_key',ADMIN_KEY); return api(url,opts)} } if(!r.ok) throw new Error(await r.text()); return r.json()}
-async function refresh(){try{S.products=await api('/api/products');S.orders=await api('/api/orders');S.users=await api('/api/users')}catch(e){alert('Не удалось загрузить данные. Проверьте ключ администратора и сервер.')}}
-
-const money=n=>Number(n||0).toLocaleString('ru-RU')+' сум';
-const esc=x=>String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
-function show(x){document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));document.getElementById({home:'h',products:'p',orders:'o',users:'u'}[x]).classList.add('active');({home,products,orders,users}[x])()}
-function home(){content.innerHTML='<div class="card"><h2>Здравствуйте! 👋</h2><p class="muted">Управление пользовательской частью магазина.</p></div><div class="grid"><button class="tile" onclick="show(\'products\')">📦<b>Товары</b><small class="muted">Добавить и изменить</small></button><button class="tile" onclick="show(\'orders\')">🧾<b>Заказы</b><small class="muted">Просмотр и статусы</small></button><button class="tile" onclick="show(\'users\')">👥<b>Пользователи</b><small class="muted">ID и данные</small></button><button class="tile" onclick="broadcast()">📣<b>Рассылка</b><small class="muted">Новости и скидки</small></button></div><div class="card"><h3>💳 Насия</h3><p class="muted">Здесь позже подключим управление лимитами рассрочки.</p></div>'}
-function products(){content.innerHTML='<div class="card"><h2>📦 Товары</h2><button class="primary" onclick="addProduct()">＋ Добавить товар</button></div>'+(S.products.length?S.products.map((x,i)=>`<div class="card product"><div class="pic"></div><div style="flex:1"><b>${esc(x.name)}</b><div>${money(x.price)}</div><small class="muted">${esc(x.category)}</small></div><button class="secondary" onclick="editProduct(${i})">Изменить</button><button class="danger" onclick="delProduct(${i})">Удалить</button></div>`).join(''):'<div class="card" style="text-align:center;color:#888">Товары пока не добавлены.</div>')}
-function addProduct(){let n=prompt('Название товара');if(!n)return;let p=prompt('Цена, сум','0');if(p===null)return;api('/api/products',{method:'POST',body:JSON.stringify({name:n,price:Number(p)||0,category:prompt('Категория','')||'',description:prompt('Описание','')||''})}).then(()=>refresh().then(products)).catch(e=>alert(e.message))}
-function editProduct(i){let x=S.products[i];let n=prompt('Название',x.name);if(n===null)return;x.name=n;x.price=Number(prompt('Цена',x.price))||0;x.category=prompt('Категория',x.category)||'';x.description=prompt('Описание',x.description)||'';save();products()}
-function delProduct(i){if(confirm('Удалить товар?')){api('/api/products/'+S.products[i].id,{method:'DELETE'}).then(()=>refresh().then(products)).catch(e=>alert(e.message))}}
-function orders(){content.innerHTML='<div class="card"><h2>🧾 Заказы</h2><p class="muted">Заказы пользователей будут появляться здесь после подключения общей базы.</p></div>'+(S.orders.length?S.orders.map((x,i)=>`<div class="card"><b>Заказ #${x.id||i+1}</b><p>${esc(x.name||'Покупатель')} · ${money(x.total)}</p><span class="status">${esc(x.status||'Новый')}</span><br><button class="primary" style="margin-top:10px" onclick="statusOrder(${i})">Изменить статус</button></div>`).join(''):'<div class="card" style="text-align:center;color:#888">Заказов пока нет.</div>')}
-function statusOrder(i){let x=prompt('Статус',S.orders[i].status||'Новый');if(x){api('/api/orders/'+S.orders[i].id,{method:'PATCH',body:JSON.stringify({status:x})}).then(()=>refresh().then(orders)).catch(e=>alert(e.message))}}
-function users(){content.innerHTML='<div class="card"><h2>👥 Пользователи</h2><p class="muted">Пользователи бота.</p></div>'+(S.users.length?S.users.map(x=>`<div class="card"><b>${esc(x.name||'Без имени')}</b><div class="muted">ID: ${esc(x.id)}</div><div class="muted">Язык: ${esc(x.lang)}</div></div>`).join(''):'<div class="card" style="text-align:center;color:#888">Пока нет пользователей.</div>')}
-function broadcast(){let x=prompt('Текст рассылки');if(x)alert('Черновик рассылки сохранён. После подключения сервера она будет отправляться пользователям.')}
-refresh().then(()=>show('home')).catch(()=>show('home'));
-</script></body></html>
+<!doctype html>
+<html lang="ru">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Magazinchik Good</title>
+<meta http-equiv="refresh" content="0; url=index.html">
+</head><body>Открытие магазина…</body></html>
